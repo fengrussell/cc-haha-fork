@@ -30,6 +30,7 @@ import {
   getTotalCost,
 } from './cost-tracker.js'
 import type { CanUseToolFn } from './hooks/useCanUseTool.js'
+import { trace } from './utils/debug.js'
 import { loadMemoryPrompt } from './memdir/memdir.js'
 import { hasAutoMemPathOverride } from './memdir/paths.js'
 import { query } from './query.js'
@@ -210,6 +211,7 @@ export class QueryEngine {
     prompt: string | ContentBlockParam[],
     options?: { uuid?: string; isMeta?: boolean },
   ): AsyncGenerator<SDKMessage, void, unknown> {
+    trace('QueryEngine.submitMessage')
     const {
       cwd,
       commands,
@@ -1246,6 +1248,7 @@ export async function* ask({
   setSDKStatus?: (status: SDKStatus) => void
   orphanedPermission?: OrphanedPermission
 }): AsyncGenerator<SDKMessage, void, unknown> {
+  trace('QueryEngine.ask')
   const engine = new QueryEngine({
     cwd,
     tools,

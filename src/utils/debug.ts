@@ -255,6 +255,30 @@ const updateLatestDebugLogSymlink = memoize(async (): Promise<void> => {
 /**
  * Logs errors for Ants only, always visible in production.
  */
+const TRACE_LOG_PATH = '/tmp/claude-trace.log'
+
+/**
+ * Log a function call with its full stack trace to /tmp/claude-trace.log.
+ * Usage: just add `trace('funcName')` at the top of any function.
+ *
+ *   import { trace } from 'src/utils/debug.js'
+ *   function getSystemPrompt() {
+ *     trace('getSystemPrompt')
+ *     // ...
+ *   }
+ */
+export function trace(label: string): void {
+  const err = new Error(label)
+  const timestamp = new Date().toISOString()
+  const stack = err.stack?.replace(/^Error: /, '') ?? label
+  const line = `${timestamp} [TRACE] ${stack}\n\n`
+  try {
+    getFsImplementation().appendFileSync(TRACE_LOG_PATH, line)
+  } catch {
+    // silently ignore
+  }
+}
+
 export function logAntError(context: string, error: unknown): void {
   if (process.env.USER_TYPE !== 'ant') {
     return

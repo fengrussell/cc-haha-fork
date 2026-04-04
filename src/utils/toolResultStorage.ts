@@ -16,7 +16,7 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growt
 import { logEvent } from '../services/analytics/index.js'
 import { sanitizeToolNameForAnalytics } from '../services/analytics/metadata.js'
 import type { Message } from '../types/message.js'
-import { logForDebugging } from './debug.js'
+import { logForDebugging, trace } from './debug.js'
 import { getErrnoCode, toError } from './errors.js'
 import { formatFileSize } from './format.js'
 import { logError } from './log.js'
@@ -138,6 +138,7 @@ export async function persistToolResult(
   content: NonNullable<ToolResultBlockParam['content']>,
   toolUseId: string,
 ): Promise<PersistedToolResult | PersistToolResultError> {
+  trace('toolResultStorage.persistToolResult')
   const isJson = Array.isArray(content)
 
   // Check for non-text content - we can only persist text blocks
@@ -214,6 +215,7 @@ export async function processToolResultBlock<T>(
   toolUseResult: T,
   toolUseID: string,
 ): Promise<ToolResultBlockParam> {
+  trace('toolResultStorage.processToolResultBlock')
   const toolResultBlock = tool.mapToolResultToToolResultBlockParam(
     toolUseResult,
     toolUseID,
@@ -774,6 +776,7 @@ export async function enforceToolResultBudget(
   messages: Message[]
   newlyReplaced: ToolResultReplacementRecord[]
 }> {
+  trace('toolResultStorage.enforceToolResultBudget')
   const candidatesByMessage = collectCandidatesByMessage(messages)
   const nameByToolUseId =
     skipToolNames.size > 0 ? buildToolNameMap(messages) : undefined
@@ -927,6 +930,7 @@ export async function applyToolResultBudget(
   writeToTranscript?: (records: ToolResultReplacementRecord[]) => void,
   skipToolNames?: ReadonlySet<string>,
 ): Promise<Message[]> {
+  trace('toolResultStorage.applyToolResultBudget')
   if (!state) return messages
   const result = await enforceToolResultBudget(messages, state, skipToolNames)
   if (result.newlyReplaced.length > 0) {

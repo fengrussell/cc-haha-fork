@@ -26,6 +26,7 @@ import {
   shouldEnableThinkingByDefault,
   type ThinkingConfig,
 } from './thinking.js'
+import { trace } from './debug.js'
 
 /**
  * Fetch the three context pieces that form the API cache-key prefix:
@@ -58,6 +59,7 @@ export async function fetchSystemPromptParts({
   userContext: { [k: string]: string }
   systemContext: { [k: string]: string }
 }> {
+  trace('queryContext.fetchSystemPromptParts')
   const [defaultSystemPrompt, userContext, systemContext] = await Promise.all([
     customSystemPrompt !== undefined
       ? Promise.resolve([])
@@ -110,6 +112,7 @@ export async function buildSideQuestionFallbackParams({
   thinkingConfig: ThinkingConfig | undefined
   agents: AgentDefinition[]
 }): Promise<CacheSafeParams> {
+  trace('queryContext.buildSideQuestionFallbackParams')
   const mainLoopModel = getMainLoopModel()
   const appState = getAppState()
 

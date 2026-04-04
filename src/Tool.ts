@@ -11,6 +11,7 @@ import type { z } from 'zod/v4'
 import type { Command } from './commands.js'
 import type { CanUseToolFn } from './hooks/useCanUseTool.js'
 import type { ThinkingConfig } from './utils/thinking.js'
+import { trace } from './utils/debug.js'
 
 export type ToolInputJSONSchema = {
   [x: string]: unknown
@@ -349,6 +350,7 @@ export function toolMatchesName(
   tool: { name: string; aliases?: string[] },
   name: string,
 ): boolean {
+  trace('Tool.toolMatchesName')
   return tool.name === name || (tool.aliases?.includes(name) ?? false)
 }
 
@@ -356,6 +358,7 @@ export function toolMatchesName(
  * Finds a tool by name or alias from a list of tools.
  */
 export function findToolByName(tools: Tools, name: string): Tool | undefined {
+  trace('Tool.findToolByName')
   return tools.find(t => toolMatchesName(t, name))
 }
 
@@ -781,6 +784,7 @@ type ToolDefaults = typeof TOOL_DEFAULTS
 type AnyToolDef = ToolDef<any, any, any>
 
 export function buildTool<D extends AnyToolDef>(def: D): BuiltTool<D> {
+  trace('Tool.buildTool')
   // The runtime spread is straightforward; the `as` bridges the gap between
   // the structural-any constraint and the precise BuiltTool<D> return. The
   // type semantics are proven by the 0-error typecheck across all 60+ tools.

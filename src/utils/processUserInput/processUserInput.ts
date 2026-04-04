@@ -36,6 +36,7 @@ import {
   getAttachmentMessages,
 } from '../attachments.js'
 import type { PastedContent } from '../config.js'
+import { trace } from '../debug.js'
 import type { EffortValue } from '../effort.js'
 import { toArray } from '../generators.js'
 import {
@@ -138,6 +139,7 @@ export async function processUserInput({
   isMeta?: boolean
   skipAttachments?: boolean
 }): Promise<ProcessUserInputBaseResult> {
+  trace('processUserInput.processUserInput')
   const inputString = typeof input === 'string' ? input : null
   // Immediately show the user input prompt while we are still processing the input.
   // Skip for isMeta (system-generated prompts like scheduled tasks) — those
@@ -297,6 +299,7 @@ async function processUserInputBase(
   skipAttachments?: boolean,
   preExpansionInput?: string,
 ): Promise<ProcessUserInputBaseResult> {
+  trace('processUserInput.processUserInputBase')
   let inputString: string | null = null
   let precedingInputBlocks: ContentBlockParam[] = []
 

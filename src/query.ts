@@ -42,7 +42,7 @@ import {
   PROMPT_TOO_LONG_ERROR_MESSAGE,
   isPromptTooLongMessage,
 } from './services/api/errors.js'
-import { logAntError, logForDebugging } from './utils/debug.js'
+import { logAntError, logForDebugging, trace } from './utils/debug.js'
 import {
   createUserMessage,
   createUserInterruptionMessage,
@@ -226,6 +226,7 @@ export async function* query(
   | ToolUseSummaryMessage,
   Terminal
 > {
+  trace('query.query')
   const consumedCommandUuids: string[] = []
   const terminal = yield* queryLoop(params, consumedCommandUuids)
   // Only reached if queryLoop returned normally. Skipped on throw (error
@@ -249,6 +250,7 @@ async function* queryLoop(
   | ToolUseSummaryMessage,
   Terminal
 > {
+  trace('query.queryLoop')
   // Immutable params — never reassigned during the query loop.
   const {
     systemPrompt,

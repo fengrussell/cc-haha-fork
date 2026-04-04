@@ -1,5 +1,6 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { toolMatchesName, type Tool, type Tools } from './Tool.js'
+import { trace } from './utils/debug.js'
 import { AgentTool } from './tools/AgentTool/AgentTool.js'
 import { SkillTool } from './tools/SkillTool/SkillTool.js'
 import { BashTool } from './tools/BashTool/BashTool.js'
@@ -191,6 +192,7 @@ export function getToolsForDefaultPreset(): string[] {
  * NOTE: This MUST stay in sync with https://console.statsig.com/4aF3Ewatb6xPVpCwxb5nA3/dynamic_configs/claude_code_global_system_caching, in order to cache the system prompt across users.
  */
 export function getAllBaseTools(): Tools {
+  trace('tools.getAllBaseTools')
   return [
     AgentTool,
     TaskOutputTool,
@@ -346,6 +348,7 @@ export function assembleToolPool(
   permissionContext: ToolPermissionContext,
   mcpTools: Tools,
 ): Tools {
+  trace('tools.assembleToolPool')
   const builtInTools = getTools(permissionContext)
 
   // Filter out MCP tools that are in the deny list
@@ -384,6 +387,7 @@ export function getMergedTools(
   permissionContext: ToolPermissionContext,
   mcpTools: Tools,
 ): Tools {
+  trace('tools.getMergedTools')
   const builtInTools = getTools(permissionContext)
   return [...builtInTools, ...mcpTools]
 }

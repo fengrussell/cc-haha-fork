@@ -1,5 +1,6 @@
 import { feature } from 'bun:bundle'
 import type { PartialCompactDirection } from '../../types/message.js'
+import { trace } from '../../utils/debug.js'
 
 // Dead code elimination: conditional import for proactive mode
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -275,6 +276,7 @@ export function getPartialCompactPrompt(
   customInstructions?: string,
   direction: PartialCompactDirection = 'from',
 ): string {
+  trace('compact.getPartialCompactPrompt')
   const template =
     direction === 'up_to'
       ? PARTIAL_COMPACT_UP_TO_PROMPT
@@ -291,6 +293,7 @@ export function getPartialCompactPrompt(
 }
 
 export function getCompactPrompt(customInstructions?: string): string {
+  trace('compact.getCompactPrompt')
   let prompt = NO_TOOLS_PREAMBLE + BASE_COMPACT_PROMPT
 
   if (customInstructions && customInstructions.trim() !== '') {
@@ -309,6 +312,7 @@ export function getCompactPrompt(customInstructions?: string): string {
  * @returns The formatted summary with analysis stripped and summary tags replaced by headers
  */
 export function formatCompactSummary(summary: string): string {
+  trace('compact.formatCompactSummary')
   let formattedSummary = summary
 
   // Strip analysis section — it's a drafting scratchpad that improves summary

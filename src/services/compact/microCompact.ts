@@ -10,7 +10,7 @@ import { GREP_TOOL_NAME } from '../../tools/GrepTool/prompt.js'
 import { WEB_FETCH_TOOL_NAME } from '../../tools/WebFetchTool/prompt.js'
 import { WEB_SEARCH_TOOL_NAME } from '../../tools/WebSearchTool/prompt.js'
 import type { Message } from '../../types/message.js'
-import { logForDebugging } from '../../utils/debug.js'
+import { logForDebugging, trace} from '../../utils/debug.js'
 import { getMainLoopModel } from '../../utils/model/model.js'
 import { SHELL_TOOL_NAMES } from '../../utils/shell/shellToolUtils.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
@@ -136,6 +136,7 @@ export function resetMicrocompactState(): void {
 
 // Helper to calculate tool result tokens
 function calculateToolResultTokens(block: ToolResultBlockParam): number {
+  trace('microCompact.calculateToolResultTokens')
   if (!block.content) {
     return 0
   }
@@ -162,6 +163,7 @@ function calculateToolResultTokens(block: ToolResultBlockParam): number {
  * Pads estimate by 4/3 to be conservative since we're approximating
  */
 export function estimateMessageTokens(messages: Message[]): number {
+  trace('microCompact.estimateMessageTokens')
   let totalTokens = 0
 
   for (const message of messages) {
@@ -224,6 +226,7 @@ export type MicrocompactResult = {
  * COMPACTABLE_TOOLS, in encounter order. Shared by both microcompact paths.
  */
 function collectCompactableToolIds(messages: Message[]): string[] {
+  trace('microCompact.collectCompactableToolIds')
   const ids: string[] = []
   for (const message of messages) {
     if (
@@ -255,6 +258,7 @@ export async function microcompactMessages(
   toolUseContext?: ToolUseContext,
   querySource?: QuerySource,
 ): Promise<MicrocompactResult> {
+  trace('microCompact.microcompactMessages')
   // Clear suppression flag at start of new microcompact attempt
   clearCompactWarningSuppression()
 
@@ -306,6 +310,7 @@ async function cachedMicrocompactPath(
   messages: Message[],
   querySource: QuerySource | undefined,
 ): Promise<MicrocompactResult> {
+  trace('microCompact.cachedMicrocompactPath')
   const mod = await getCachedMCModule()
   const state = ensureCachedMCState()
   const config = mod.getCachedMCConfig()
@@ -423,6 +428,7 @@ export function evaluateTimeBasedTrigger(
   messages: Message[],
   querySource: QuerySource | undefined,
 ): { gapMinutes: number; config: TimeBasedMCConfig } | null {
+  trace('microCompact.evaluateTimeBasedTrigger')
   const config = getTimeBasedMCConfig()
   // Require an explicit main-thread querySource. isMainThreadSource treats
   // undefined as main-thread (for cached-MC backward-compat), but several
@@ -447,6 +453,7 @@ function maybeTimeBasedMicrocompact(
   messages: Message[],
   querySource: QuerySource | undefined,
 ): MicrocompactResult | null {
+  trace('microCompact.maybeTimeBasedMicrocompact')
   const trigger = evaluateTimeBasedTrigger(messages, querySource)
   if (!trigger) {
     return null

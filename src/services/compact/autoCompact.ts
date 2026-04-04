@@ -6,7 +6,7 @@ import type { ToolUseContext } from '../../Tool.js'
 import type { Message } from '../../types/message.js'
 import { getGlobalConfig } from '../../utils/config.js'
 import { getContextWindowForModel } from '../../utils/context.js'
-import { logForDebugging } from '../../utils/debug.js'
+import { logForDebugging, trace } from '../../utils/debug.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
 import { hasExactErrorMessage } from '../../utils/errors.js'
 import type { CacheSafeParams } from '../../utils/forkedAgent.js'
@@ -31,6 +31,8 @@ const MAX_OUTPUT_TOKENS_FOR_SUMMARY = 20_000
 
 // Returns the context window size minus the max output tokens for the model
 export function getEffectiveContextWindowSize(model: string): number {
+  trace('autoCompact.getEffectiveContextWindowSize')
+
   const reservedTokensForSummary = Math.min(
     getMaxOutputTokensForModel(model),
     MAX_OUTPUT_TOKENS_FOR_SUMMARY,
@@ -70,6 +72,7 @@ export const MANUAL_COMPACT_BUFFER_TOKENS = 3_000
 const MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES = 3
 
 export function getAutoCompactThreshold(model: string): number {
+  trace('autoCompact.getAutoCompactThreshold')
   const effectiveContextWindow = getEffectiveContextWindowSize(model)
 
   const autocompactThreshold =
@@ -100,6 +103,7 @@ export function calculateTokenWarningState(
   isAboveAutoCompactThreshold: boolean
   isAtBlockingLimit: boolean
 } {
+  trace('autoCompact.calculateTokenWarningState')
   const autoCompactThreshold = getAutoCompactThreshold(model)
   const threshold = isAutoCompactEnabled()
     ? autoCompactThreshold

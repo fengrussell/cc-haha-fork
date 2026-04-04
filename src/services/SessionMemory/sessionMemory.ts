@@ -23,6 +23,7 @@ import {
   createSubagentContext,
   runForkedAgent,
 } from '../../utils/forkedAgent.js'
+import { trace } from '../../utils/debug.js'
 import { getFsImplementation } from '../../utils/fsOperations.js'
 import {
   type REPLHookContext,
@@ -132,6 +133,7 @@ function countToolCallsSince(
 }
 
 export function shouldExtractMemory(messages: Message[]): boolean {
+  trace('SessionMemory.shouldExtractMemory')
   // Check if we've met the initialization threshold
   // Uses total context window tokens (same as autocompact) for consistent behavior
   const currentTokenCount = tokenCountWithEstimation(messages)
@@ -355,6 +357,7 @@ const extractSessionMemory = sequential(async function (
  * The gate check and config loading happen lazily when the hook runs.
  */
 export function initSessionMemory(): void {
+  trace('SessionMemory.initSessionMemory')
   if (getIsRemoteMode()) return
   // Session memory is used for compaction, so respect auto-compact settings
   const autoCompactEnabled = isAutoCompactEnabled()
@@ -388,6 +391,7 @@ export async function manuallyExtractSessionMemory(
   messages: Message[],
   toolUseContext: ToolUseContext,
 ): Promise<ManualExtractionResult> {
+  trace('SessionMemory.manuallyExtractSessionMemory')
   if (messages.length === 0) {
     return { success: false, error: 'No messages to summarize' }
   }
