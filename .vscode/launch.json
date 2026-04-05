@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug claude-haha (CLI)",
+      "type": "bun",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/entrypoints/cli.tsx",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "CLAUDE_CODE_LOCAL_SKIP_REMOTE_PREFETCH": "1"
+      },
+      "runtime": "bun",
+      "runtimeArgs": [
+        "--preload",
+        "./preload.ts",
+        "--env-file=.env"
+      ],
+      "stopOnEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Recovery CLI",
+      "type": "bun",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/localRecoveryCli.ts",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "CLAUDE_CODE_FORCE_RECOVERY_CLI": "1",
+        "CLAUDE_CODE_LOCAL_SKIP_REMOTE_PREFETCH": "1"
+      },
+      "runtime": "bun",
+      "runtimeArgs": [
+        "--preload",
+        "./preload.ts",
+        "--env-file=.env"
+      ],
+      "stopOnEntry": false,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Attach to Bun (Inspector)",
+      "type": "bun",
+      "request": "attach",
+      "url": "ws://127.0.0.1:6499/claude-debug",
+      "stopOnEntry": false
+    }
+  ]
+}

@@ -8,7 +8,7 @@ node_modules
 extracted-natives/
 
 # IDE
-.vscode/
+#.vscode/
 
 # Lock file
 bun.lock
