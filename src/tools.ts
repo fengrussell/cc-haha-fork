@@ -178,6 +178,7 @@ export function parseToolPreset(preset: string): ToolPreset | null {
  * @returns Array of tool names
  */
 export function getToolsForDefaultPreset(): string[] {
+  trace('tools.getToolsForDefaultPreset')
   const tools = getAllBaseTools()
   const isEnabled = tools.map(tool => tool.isEnabled())
   return tools.filter((_, i) => isEnabled[i]).map(tool => tool.name)
@@ -271,6 +272,7 @@ export function filterToolsByDenyRules<
 }
 
 export const getTools = (permissionContext: ToolPermissionContext): Tools => {
+  trace('tools.getTools')
   // Simple mode: only Bash, Read, and Edit tools
   if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
     // --bare + REPL mode: REPL wraps Bash/Read/Edit/etc inside the VM, so

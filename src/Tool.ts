@@ -350,7 +350,7 @@ export function toolMatchesName(
   tool: { name: string; aliases?: string[] },
   name: string,
 ): boolean {
-  trace('Tool.toolMatchesName')
+  trace('Tool.toolMatchesName', name, tool)
   return tool.name === name || (tool.aliases?.includes(name) ?? false)
 }
 
@@ -784,10 +784,13 @@ type ToolDefaults = typeof TOOL_DEFAULTS
 type AnyToolDef = ToolDef<any, any, any>
 
 export function buildTool<D extends AnyToolDef>(def: D): BuiltTool<D> {
-  trace('Tool.buildTool')
+  // trace('Tool.buildTool')
   // The runtime spread is straightforward; the `as` bridges the gap between
   // the structural-any constraint and the precise BuiltTool<D> return. The
   // type semantics are proven by the 0-error typecheck across all 60+ tools.
+  // 运行时展开逻辑很直接；
+  // `as` 类型断言用于弥合「宽松的结构类型约束」和「精确的 BuiltTool<D> 返回类型」之间的类型差距。
+  // 整套类型语义已经通过 60 多个工具的 0 错误类型检查验证过了。
   return {
     ...TOOL_DEFAULTS,
     userFacingName: () => def.name,

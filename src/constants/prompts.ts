@@ -447,7 +447,7 @@ export async function getSystemPrompt(
   additionalWorkingDirectories?: string[],
   mcpClients?: MCPServerConnection[],
 ): Promise<string[]> {
-  trace('getSystemPrompt called')
+  trace('prompts.getSystemPrompt')
   if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
     return [
       `You are Claude Code, Anthropic's official CLI for Claude.\n\nCWD: ${getCwd()}\nDate: ${getSessionStartDate()}`,
@@ -608,6 +608,7 @@ export async function computeEnvInfo(
   modelId: string,
   additionalWorkingDirectories?: string[],
 ): Promise<string> {
+  trace('prompts.computeEnvInfo', modelId, additionalWorkingDirectories)
   const [isGit, unameSR] = await Promise.all([getIsGit(), getUnameSR()])
 
   // Undercover: keep ALL model names/IDs out of the system prompt so nothing
@@ -653,6 +654,7 @@ export async function computeSimpleEnvInfo(
   modelId: string,
   additionalWorkingDirectories?: string[],
 ): Promise<string> {
+  trace('prompts.computeSimpleEnvInfo', modelId, additionalWorkingDirectories)
   const [isGit, unameSR] = await Promise.all([getIsGit(), getUnameSR()])
 
   // Undercover: strip all model name/ID references. See computeEnvInfo.
@@ -764,6 +766,7 @@ export async function enhanceSystemPromptWithEnvDetails(
   additionalWorkingDirectories?: string[],
   enabledToolNames?: ReadonlySet<string>,
 ): Promise<string[]> {
+  trace('prompts.enhanceSystemPromptWithEnvDetails', model, additionalWorkingDirectories)
   const notes = `Notes:
 - Agent threads always have their cwd reset between bash calls, as a result please only use absolute file paths.
 - In your final response, share file paths (always absolute, never relative) that are relevant to the task. Include code snippets only when the exact text is load-bearing (e.g., a bug you found, a function signature the caller asked for) — do not recap code you merely read.
@@ -796,6 +799,7 @@ export async function enhanceSystemPromptWithEnvDetails(
  * The scratchpad is a per-session directory where Claude can write temporary files.
  */
 export function getScratchpadInstructions(): string | null {
+  trace('prompts.getScratchpadInstructions')
   if (!isScratchpadEnabled()) {
     return null
   }

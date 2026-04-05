@@ -170,6 +170,7 @@ export async function shouldAutoCompact(
   // Subtract the rough-delta that snip already computed.
   snipTokensFreed = 0,
 ): Promise<boolean> {
+  trace('autoCompact.shouldAutoCompact')
   // Recursion guards. session_memory and compact are forked agents that
   // would deadlock.
   if (querySource === 'session_memory' || querySource === 'compact') {
