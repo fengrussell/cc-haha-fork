@@ -43,7 +43,6 @@
       "name": "Attach to Bun (Inspector)",
       "type": "bun",
       "request": "attach",
-      "args": ["--debug"],
       "url": "ws://127.0.0.1:6499/claude-debug",
       "stopOnEntry": false
     }
