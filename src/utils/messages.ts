@@ -146,7 +146,7 @@ import { TASK_UPDATE_TOOL_NAME } from '../tools/TaskUpdateTool/constants.js'
 import type { PermissionMode } from '../types/permissions.js'
 import { normalizeToolInput, normalizeToolInputForAPI } from './api.js'
 import { getCurrentProjectConfig } from './config.js'
-import { logAntError, logForDebugging } from './debug.js'
+import { logAntError, logForDebugging, trace } from './debug.js'
 import { stripIdeContextTags } from './displayTags.js'
 import { hasEmbeddedSearchTools } from './embeddedTools.js'
 import { formatFileSize } from './format.js'
@@ -4561,6 +4561,7 @@ export function createMicrocompactBoundaryMessage(
   compactedToolIds: string[],
   clearedAttachmentUUIDs: string[],
 ): SystemMicrocompactBoundaryMessage {
+  trace('messages.createMicrocompactBoundaryMessage')
   logForDebugging(
     `[microcompact] saved ~${formatTokens(tokensSaved)} tokens (cleared ${compactedToolIds.length} tool results)`,
   )
