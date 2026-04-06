@@ -72,7 +72,7 @@ export const MANUAL_COMPACT_BUFFER_TOKENS = 3_000
 const MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES = 3
 
 export function getAutoCompactThreshold(model: string): number {
-  trace('autoCompact.getAutoCompactThreshold')
+//  trace('autoCompact.getAutoCompactThreshold')
   const effectiveContextWindow = getEffectiveContextWindowSize(model)
 
   const autocompactThreshold =
@@ -120,6 +120,7 @@ export function calculateTokenWarningState(
   const isAboveWarningThreshold = tokenUsage >= warningThreshold
   const isAboveErrorThreshold = tokenUsage >= errorThreshold
 
+  // 是否超过自动压缩阈值
   const isAboveAutoCompactThreshold =
     isAutoCompactEnabled() && tokenUsage >= autoCompactThreshold
 
@@ -255,6 +256,8 @@ export async function autoCompactIfNeeded(
   compactionResult?: CompactionResult
   consecutiveFailures?: number
 }> {
+  trace('autoCompact.autoCompactIfNeeded')
+
   if (isEnvTruthy(process.env.DISABLE_COMPACT)) {
     return { wasCompacted: false }
   }

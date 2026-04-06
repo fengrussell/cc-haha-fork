@@ -16,6 +16,7 @@
         "./preload.ts",
         "--env-file=.env"
       ],
+      "args": ["--debug"],
       "stopOnEntry": false,
       "console": "integratedTerminal"
     },

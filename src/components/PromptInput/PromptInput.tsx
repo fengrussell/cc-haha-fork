@@ -235,9 +235,9 @@ function PromptInput({
   insertTextRef,
   voiceInterimRange
 }: Props): React.ReactNode {
-  trace('PromptInput.render')
+  // trace('PromptInput.render')
   const mainLoopModel = useMainLoopModel();
-  // A local-jsx command (e.g., /mcp while agent is running) renders a full-
+  // A local-jsx command (e.g., /mcp while aget is running) renders a full-
   // screen dialog on top of PromptInput via the immediate-command path with
   // shouldHidePromptInput: false. Those dialogs don't register in the overlay
   // system, so treat them as a modal overlay here to stop navigation keys from

@@ -350,7 +350,7 @@ export function toolMatchesName(
   tool: { name: string; aliases?: string[] },
   name: string,
 ): boolean {
-  trace('Tool.toolMatchesName', name, tool)
+  // trace('Tool.toolMatchesName', name, tool)
   return tool.name === name || (tool.aliases?.includes(name) ?? false)
 }
 
