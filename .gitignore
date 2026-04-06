@@ -12,3 +12,6 @@ extracted-natives/
 
 # Lock file
 bun.lock
+
+# claude
+.claude
