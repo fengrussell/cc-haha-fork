@@ -292,3 +292,170 @@ autoCompactIfNeeded(snipTokensFreed)     [246行, 参数]
   └── shouldAutoCompact(snipTokensFreed)  [275行, 透传]
         └── tokenCountWithEstimation(messages) - snipTokensFreed  [230行, 使用]
 ```
+
+---
+
+## 六、tokenCountWithEstimation 详解
+
+**文件**: `src/utils/tokens.ts:226`
+
+这是系统中**测量上下文窗口大小的标准函数**，所有阈值判断（autoCompact、session memory init 等）都应使用它。
+
+### 算法三步走
+
+**第 1 步：从后向前找最近一条有 usage 的 assistant 消息**
+
+```ts
+let i = messages.length - 1
+while (i >= 0) {
+  const usage = getTokenUsage(messages[i])  // 过滤掉 SYNTHETIC_MESSAGES/SYNTHETIC_MODEL
+  if (usage) { ... }
+  i--
+}
+```
+
+**第 2 步：处理并行 tool call 的消息拆分**
+
+当模型一次返回多个 tool_use 时，streaming 代码将每个 content block 拆成**独立的 assistant 记录**（共享同一 `message.id` 和 `usage`），消息数组形如：
+
+```
+[..., assistant(id=A), user(result_1), assistant(id=A), user(result_2), ...]
+```
+
+如果只从最后一条 `id=A` 开始估算，会漏掉前面交错的 tool_result。代码向前回溯到同一 `message.id` 的第一条拆分记录：
+
+```ts
+const responseId = getAssistantMessageId(message)
+let j = i - 1
+while (j >= 0) {
+  const priorId = getAssistantMessageId(messages[j])
+  if (priorId === responseId) i = j        // 同一 API 响应的更早拆分，锚点前移
+  else if (priorId !== undefined) break     // 碰到不同 API 响应，停止
+  // priorId === undefined: user/tool_result 消息，继续向前
+  j--
+}
+```
+
+**第 3 步：精确 + 粗估组合**
+
+```ts
+return getTokenCountFromUsage(usage) + roughTokenCountEstimationForMessages(messages.slice(i + 1))
+```
+
+- 前半：API 返回的 usage（`input_tokens + cache_creation + cache_read + output_tokens`）作为精确基数
+- 后半：对 `i+1` 之后所有新增消息做粗略估算（字符数 / 4）
+
+**兜底**：如果没有任何带 usage 的消息，对全部消息做粗略估算。
+
+### roughTokenCountEstimation 按类型估算规则
+
+| Content Block 类型 | 估算方式 |
+|---|---|
+| `text` / `thinking` | `chars / 4` |
+| `image` / `document` | 固定 2000 tokens（避免 base64 高估） |
+| `tool_use` | `(name + JSON.stringify(input))` 的 `chars / 4` |
+| `tool_result` | 递归处理其 content |
+| `redacted_thinking` | `data.length / 4` |
+| 其他（server_tool_use 等） | `JSON.stringify(block)` 的 `chars / 4` |
+
+### 设计要点
+
+1. **hybrid 策略**：精确 API usage + 粗估新增消息，避免纯累加导致的双重计数
+2. **并行 tool call 感知**：回溯到同一 `message.id` 的第一条拆分，确保交错的 tool_result 全部纳入估算
+3. **image/document 固定值**：避免 base64 字符数（远大于实际 token）导致高估
+
+---
+
+## 七、autoCompact 阈值计算与触发条件
+
+### 阈值公式
+
+```
+effectiveContextWindow = contextWindowForModel - min(maxOutputTokensForModel, 20000)
+autoCompactThreshold   = effectiveContextWindow - 13000 (AUTOCOMPACT_BUFFER_TOKENS)
+```
+
+可通过环境变量覆盖：
+- `CLAUDE_CODE_AUTO_COMPACT_WINDOW` — 限制 contextWindow 上限
+- `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` — 按百分比设置阈值（取百分比值和默认值的较小者）
+
+### shouldAutoCompact 完整过滤链
+
+```
+shouldAutoCompact(messages, model, querySource, snipTokensFreed)
+  │
+  ├─ querySource === 'session_memory' | 'compact' → false    递归 guard，防死锁
+  ├─ querySource === 'marble_origami' → false                 ctx-agent guard (feature gate)
+  ├─ !isAutoCompactEnabled() → false
+  │   ├─ DISABLE_COMPACT=1 → false
+  │   ├─ DISABLE_AUTO_COMPACT=1 → false
+  │   └─ globalConfig.autoCompactEnabled === false → false
+  ├─ REACTIVE_COMPACT gate: tengu_cobalt_raccoon → false      reactive-only 模式抑制
+  ├─ CONTEXT_COLLAPSE gate: isContextCollapseEnabled() → false collapse 拥有上下文管理
+  │
+  └─ tokenCountWithEstimation(messages) - snipTokensFreed >= autoCompactThreshold → true
+```
+
+### autoCompactIfNeeded 执行流程
+
+```
+autoCompactIfNeeded(messages, toolUseContext, cacheSafeParams, querySource, tracking, snipTokensFreed)
+  │
+  ├─ DISABLE_COMPACT → return { wasCompacted: false }
+  │
+  ├─ tracking.consecutiveFailures >= 3 → return { wasCompacted: false }   断路器
+  │
+  ├─ shouldAutoCompact() → false → return { wasCompacted: false }
+  │
+  ├─ 构建 recompactionInfo（诊断上下文）
+  │
+  ├─ trySessionMemoryCompaction()                         优先尝试轻量 session memory 压缩
+  │   └─ 成功 → setLastSummarizedMessageId(undefined)
+  │           → runPostCompactCleanup()
+  │           → notifyCompaction() (feature gate)
+  │           → markPostCompaction()
+  │           → return { wasCompacted: true, compactionResult }
+  │
+  ├─ compactConversation()                                重量级 LLM 摘要压缩
+  │   └─ 成功 → setLastSummarizedMessageId(undefined)
+  │           → runPostCompactCleanup()
+  │           → return { wasCompacted: true, consecutiveFailures: 0 }
+  │
+  └─ catch → logError()
+          → consecutiveFailures++
+          → return { wasCompacted: false, consecutiveFailures }
+```
+
+### compactConversation 核心步骤
+
+1. **PreCompact hooks** — 执行用户配置的预压缩钩子，合并自定义指令
+2. **streamCompactSummary** — 调用 LLM 生成对话摘要
+   - 优先走 forked agent 路径（复用主对话的 prompt cache）
+   - 失败回退到普通 streaming 路径
+   - 如果摘要请求本身 prompt-too-long，truncateHeadForPTLRetry 丢弃最旧的 API-round 组重试（最多 3 次）
+3. **清理缓存** — `readFileState.clear()`, `loadedNestedMemoryPaths.clear()`
+4. **构建 post-compact 附件** — 并行生成：
+   - 最近访问文件（最多 5 个，token 预算 50K）
+   - 异步 agent 状态
+   - Plan 文件 / Plan mode 指令
+   - Skill 内容（每个最多 5K tokens，总预算 25K）
+   - Deferred tools / Agent listing / MCP instructions delta
+5. **SessionStart hooks** — 执行会话启动钩子
+6. **分析与遥测** — 记录 tengu_compact 事件（压缩前后 token 数、是否会重触发等）
+7. **PostCompact hooks** — 执行用户配置的后压缩钩子
+
+### 相关常量一览
+
+| 常量 | 值 | 用途 |
+|---|---|---|
+| `AUTOCOMPACT_BUFFER_TOKENS` | 13,000 | autoCompact 阈值 = effective - 13K |
+| `WARNING_THRESHOLD_BUFFER_TOKENS` | 20,000 | 上下文用量警告阈值 |
+| `ERROR_THRESHOLD_BUFFER_TOKENS` | 20,000 | 上下文用量错误阈值 |
+| `MANUAL_COMPACT_BUFFER_TOKENS` | 3,000 | 阻塞限制 = effective - 3K |
+| `MAX_OUTPUT_TOKENS_FOR_SUMMARY` | 20,000 | 压缩摘要预留输出 token |
+| `MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES` | 3 | 断路器阈值 |
+| `POST_COMPACT_MAX_FILES_TO_RESTORE` | 5 | 压缩后恢复最近文件数 |
+| `POST_COMPACT_TOKEN_BUDGET` | 50,000 | 文件恢复 token 预算 |
+| `POST_COMPACT_MAX_TOKENS_PER_FILE` | 5,000 | 单文件恢复 token 上限 |
+| `POST_COMPACT_MAX_TOKENS_PER_SKILL` | 5,000 | 单 skill 恢复 token 上限 |
+| `POST_COMPACT_SKILLS_TOKEN_BUDGET` | 25,000 | skill 恢复总 token 预算 |
