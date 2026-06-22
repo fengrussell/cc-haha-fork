@@ -39,6 +39,10 @@
     .toolbar.expanded .toolbar-actions { display: flex; }
     .toolbar-actions button { background: #ffffff; border: 1px solid #cbd5e1; color: #475569; padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-family: inherit; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
     .toolbar-actions button:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+    .toolbar.expanded .toolbar-actions { align-items: center; flex-wrap: wrap; }
+    .tb-group { display: flex; align-items: center; color: #94a3b8; font-size: 0.7rem; padding: 0 0.15rem; }
+    .tb-sep { width: 1px; align-self: stretch; background: #cbd5e1; margin: 0 0.15rem; }
+    .tb-scale { background: #ffffff; border: 1px solid #cbd5e1; color: #475569; border-radius: 0.375rem; font-family: inherit; font-size: 0.72rem; padding: 0.2rem 0.3rem; cursor: pointer; }
     @media print { body { background: #f8fafc; padding: 1rem; } .toolbar { display: none !important; } }
   </style>
 </head>
@@ -50,9 +54,19 @@
         <h1>Claude Code — SSE Streaming Flow</h1>
         <div class="toolbar">
           <div class="toolbar-actions">
-            <button onclick="copyAsImage(this)">📋 Copy</button>
-            <button onclick="downloadPNG(this)">🖼️ PNG</button>
-            <button onclick="downloadPDF(this)">📄 PDF</button>
+            <span class="tb-group">图</span>
+            <button onclick="exportPNG(this,'svg')">🖼️ PNG</button>
+            <button onclick="exportSVG(this)">◇ SVG</button>
+            <button onclick="exportPDF(this,'svg')">📄 PDF</button>
+            <button onclick="copyImg(this,'svg')">📋 Copy</button>
+            <span class="tb-sep"></span>
+            <span class="tb-group">整页</span>
+            <button onclick="exportPNG(this,'report')">🖼️ PNG</button>
+            <button onclick="exportPDF(this,'report')">📄 PDF</button>
+            <select class="tb-scale" id="exp-scale" title="分辨率倍数">
+              <option value="2">2x</option>
+              <option value="3">3x</option>
+            </select>
           </div>
           <button class="toolbar-toggle" onclick="this.parentElement.classList.toggle('expanded')" title="Export options" aria-label="Export options">⋯</button>
         </div>
@@ -197,47 +211,88 @@
   </div>
 
   <script>
-    async function copyAsImage(btn) {
-      const orig = btn.textContent;
+    const THEME_BG = '#f8fafc';
+    const FILE = 'sse_streaming_light';
+    function expScale(){ const s = document.getElementById('exp-scale'); return s ? (parseInt(s.value, 10) || 2) : 2; }
+    function flash(btn, txt){ if (!btn.dataset.label) btn.dataset.label = btn.textContent; btn.textContent = txt; clearTimeout(btn._t); btn._t = setTimeout(() => { btn.textContent = btn.dataset.label; }, 1600); }
+
+    async function rasterize(target, scale){
+      const el = target === 'report'
+        ? document.getElementById('report-container')
+        : document.querySelector('#report-container svg');
+      const r = el.getBoundingClientRect();
+      const pad = target === 'report' ? 32 : 16;
+      return await html2canvas(document.body, {
+        backgroundColor: THEME_BG, scale, useCORS: true,
+        ignoreElements: (e) => e.classList && e.classList.contains('toolbar'),
+        x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad,
+        width: r.width + pad * 2, height: r.height + pad * 2,
+      });
+    }
+
+    function standaloneSVG(){
+      const svg = document.querySelector('#report-container svg');
+      const clone = svg.cloneNode(true);
+      const vb = svg.viewBox && svg.viewBox.baseVal;
+      const w = vb && vb.width ? vb.width : svg.clientWidth;
+      const h = vb && vb.height ? vb.height : svg.clientHeight;
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      clone.setAttribute('width', w);
+      clone.setAttribute('height', h);
+      clone.setAttribute('font-family', "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace");
+      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+      bg.setAttribute('width', w); bg.setAttribute('height', h);
+      bg.setAttribute('fill', THEME_BG);
+      clone.insertBefore(bg, clone.firstChild);
+      return new XMLSerializer().serializeToString(clone);
+    }
+
+    async function exportPNG(btn, target){
+      flash(btn, '⏳');
       try {
-        const el = document.getElementById('report-container');
-        const r = el.getBoundingClientRect();
-        const pad = 32;
-        const canvas = await html2canvas(document.body, { backgroundColor: '#f8fafc', scale: 2, useCORS: true, ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
-        const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+        const c = await rasterize(target, expScale());
+        const a = document.createElement('a');
+        a.download = FILE + (target === 'report' ? '_full' : '') + '.png';
+        a.href = c.toDataURL('image/png'); a.click();
+        flash(btn, '✓');
+      } catch (e) { flash(btn, '✗'); }
+    }
+
+    async function copyImg(btn, target){
+      flash(btn, '⏳');
+      try {
+        const c = await rasterize(target, expScale());
+        const blob = await new Promise(res => c.toBlob(res, 'image/png'));
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        btn.textContent = '✓ Copied!';
-      } catch (e) { btn.textContent = '✗ Failed'; }
-      setTimeout(() => btn.textContent = orig, 2000);
+        flash(btn, '✓');
+      } catch (e) { flash(btn, '✗'); }
     }
-    async function downloadPNG(btn) {
-      const orig = btn.textContent; btn.textContent = '⏳ ...';
+
+    async function exportPDF(btn, target){
+      flash(btn, '⏳');
       try {
-        const el = document.getElementById('report-container');
-        const r = el.getBoundingClientRect();
-        const pad = 32;
-        const canvas = await html2canvas(document.body, { backgroundColor: '#f8fafc', scale: 2, useCORS: true, ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
-        const link = document.createElement('a'); link.download = 'sse_streaming_light.png'; link.href = canvas.toDataURL('image/png'); link.click();
-        btn.textContent = '✓ Done!';
-      } catch (e) { btn.textContent = '✗ Failed'; }
-      setTimeout(() => btn.textContent = orig, 2000);
-    }
-    async function downloadPDF(btn) {
-      const orig = btn.textContent; btn.textContent = '⏳ ...';
-      try {
-        const el = document.getElementById('report-container');
-        const r = el.getBoundingClientRect();
-        const pad = 32;
-        const canvas = await html2canvas(document.body, { backgroundColor: '#f8fafc', scale: 2, useCORS: true, ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
-        const imgData = canvas.toDataURL('image/png');
+        const c = await rasterize(target, expScale());
+        const imgData = c.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
-        const orientation = canvas.width > canvas.height ? 'landscape' : 'portrait';
-        const pdf = new jsPDF({ orientation, unit: 'px', format: [canvas.width, canvas.height], hotfixes: ['px_scaling'] });
-        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-        pdf.save('sse_streaming_light.pdf');
-        btn.textContent = '✓ Done!';
-      } catch (e) { btn.textContent = '✗ Failed'; }
-      setTimeout(() => btn.textContent = orig, 2000);
+        const orientation = c.width > c.height ? 'landscape' : 'portrait';
+        const pdf = new jsPDF({ orientation, unit: 'px', format: [c.width, c.height], hotfixes: ['px_scaling'] });
+        pdf.addImage(imgData, 'PNG', 0, 0, c.width, c.height);
+        pdf.save(FILE + (target === 'report' ? '_full' : '') + '.pdf');
+        flash(btn, '✓');
+      } catch (e) { flash(btn, '✗'); }
+    }
+
+    function exportSVG(btn){
+      flash(btn, '⏳');
+      try {
+        const blob = new Blob([standaloneSVG()], { type: 'image/svg+xml;charset=utf-8' });
+        const a = document.createElement('a');
+        a.download = FILE + '.svg';
+        a.href = URL.createObjectURL(blob); a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        flash(btn, '✓');
+      } catch (e) { flash(btn, '✗'); }
     }
   </script>
 </body>
